@@ -94,6 +94,7 @@ def normalise_chrom(source, target):
 def get_delta_scores(record, ann, dist_var, mask):
 
     cov = 2*dist_var+1
+    half_cov = cov // 2
     wid = 10000+cov
     delta_scores = []
 
@@ -164,15 +165,15 @@ def get_delta_scores(record, ann, dist_var, mask):
 
             if ref_len > 1 and alt_len == 1:
                 y_alt = np.concatenate([
-                    y_alt[:, :cov//2+alt_len],
+                    y_alt[:, :half_cov+alt_len],
                     np.zeros((1, del_len, 3)),
-                    y_alt[:, cov//2+alt_len:]],
+                    y_alt[:, half_cov+alt_len:]],
                     axis=1)
             elif ref_len == 1 and alt_len > 1:
                 y_alt = np.concatenate([
-                    y_alt[:, :cov//2],
-                    np.max(y_alt[:, cov//2:cov//2+alt_len], axis=1)[:, None, :],
-                    y_alt[:, cov//2+alt_len:]],
+                    y_alt[:, :half_cov],
+                    np.max(y_alt[:, half_cov:half_cov+alt_len], axis=1)[:, None, :],
+                    y_alt[:, half_cov+alt_len:]],
                     axis=1)
 
             y = np.concatenate([y_ref, y_alt])
@@ -182,10 +183,10 @@ def get_delta_scores(record, ann, dist_var, mask):
             idx_pd = (y[1, :, 2]-y[0, :, 2]).argmax()
             idx_nd = (y[0, :, 2]-y[1, :, 2]).argmax()
 
-            mask_pa = np.logical_and((idx_pa-cov//2 == dist_ann[2]), mask)
-            mask_na = np.logical_and((idx_na-cov//2 != dist_ann[2]), mask)
-            mask_pd = np.logical_and((idx_pd-cov//2 == dist_ann[2]), mask)
-            mask_nd = np.logical_and((idx_nd-cov//2 != dist_ann[2]), mask)
+            mask_pa = np.logical_and((idx_pa-half_cov == dist_ann[2]), mask)
+            mask_na = np.logical_and((idx_na-half_cov != dist_ann[2]), mask)
+            mask_pd = np.logical_and((idx_pd-half_cov == dist_ann[2]), mask)
+            mask_nd = np.logical_and((idx_nd-half_cov != dist_ann[2]), mask)
 
             delta_scores.append("{}|{}|{:.2f}|{:.2f}|{:.2f}|{:.2f}|{}|{}|{}|{}".format(
                                 record.alts[j],
@@ -194,10 +195,10 @@ def get_delta_scores(record, ann, dist_var, mask):
                                 (y[0, idx_na, 1]-y[1, idx_na, 1])*(1-mask_na),
                                 (y[1, idx_pd, 2]-y[0, idx_pd, 2])*(1-mask_pd),
                                 (y[0, idx_nd, 2]-y[1, idx_nd, 2])*(1-mask_nd),
-                                idx_pa-cov//2,
-                                idx_na-cov//2,
-                                idx_pd-cov//2,
-                                idx_nd-cov//2))
+                                idx_pa-half_cov,
+                                idx_na-half_cov,
+                                idx_pd-half_cov,
+                                idx_nd-half_cov))
 
     return delta_scores
 

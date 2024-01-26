@@ -3,6 +3,7 @@ import argparse
 import logging
 import pysam
 from spliceai.utils import Annotator, get_delta_scores
+from tqdm import tqdm
 
 
 try:
@@ -39,6 +40,17 @@ def get_options():
     return args
 
 
+def format_vcf_record(record) -> str:
+    return f"{record.chrom}_{record.pos}_{record.ref}_{record.alts}"
+
+
+def read_outputs(vcf_file):
+    records = []
+    for record in vcf_file:
+        records.append(format_vcf_record(record))
+    return records
+
+
 def main():
 
     args = get_options()
@@ -68,7 +80,13 @@ def main():
 
     ann = Annotator(args.R, args.A)
 
-    for record in vcf:
+    precomputed_outputs = read_outputs(output)
+    print(f"Found precomputed {len(precomputed_outputs)} records")
+
+    for record in tqdm(vcf):
+        if format_vcf_record(record) in precomputed_outputs:
+            continue
+
         scores = get_delta_scores(record, ann, args.D, args.M)
         if len(scores) > 0:
             record.info['SpliceAI'] = scores
