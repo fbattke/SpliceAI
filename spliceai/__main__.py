@@ -4,6 +4,7 @@ import logging
 import pysam
 from spliceai.utils import Annotator, get_delta_scores
 from tqdm import tqdm
+from pathlib import Path
 
 
 try:
@@ -72,16 +73,16 @@ def main():
                     'acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). '
                     'Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL">')
 
+    if Path(args.O).is_file():
+        output = pysam.VariantFile(args.O, header=header)
+        precomputed_outputs = read_outputs(output)
+        print(f"Found precomputed {len(precomputed_outputs)} records")
     try:
         output = pysam.VariantFile(args.O, mode='w', header=header)
     except (IOError, ValueError) as e:
         logging.error('{}'.format(e))
         exit()
-
     ann = Annotator(args.R, args.A)
-
-    precomputed_outputs = read_outputs(output)
-    print(f"Found precomputed {len(precomputed_outputs)} records")
 
     for record in tqdm(vcf):
         if format_vcf_record(record) in precomputed_outputs:
