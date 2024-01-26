@@ -74,9 +74,10 @@ def main():
                     'Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL">')
 
     precomputed_outputs = []
+    prev_output = None
     if Path(args.O).is_file():
-        output = pysam.VariantFile(args.O, header=header)
-        precomputed_outputs = read_outputs(output)
+        prev_output = pysam.VariantFile(args.O, header=header)
+        precomputed_outputs = read_outputs(prev_output)
         print(f"Found precomputed {len(precomputed_outputs)} records")
     try:
         output = pysam.VariantFile(args.O, mode='w', header=header)
@@ -84,6 +85,10 @@ def main():
         logging.error('{}'.format(e))
         exit()
     ann = Annotator(args.R, args.A)
+
+    if len(precomputed_outputs) > 0:
+        for record in prev_output:
+            output.write(record)
 
     for record in tqdm(vcf):
         if format_vcf_record(record) in precomputed_outputs:
