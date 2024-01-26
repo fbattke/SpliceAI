@@ -73,6 +73,7 @@ def main():
                     'acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). '
                     'Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL">')
 
+    precomputed_outputs = []
     if Path(args.O).is_file():
         output = pysam.VariantFile(args.O, header=header)
         precomputed_outputs = read_outputs(output)
