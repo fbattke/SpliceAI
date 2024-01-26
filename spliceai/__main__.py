@@ -76,7 +76,7 @@ def main():
     precomputed_outputs = []
     prev_output = None
     if Path(args.O).is_file():
-        prev_output = pysam.VariantFile(args.O, header=header)
+        prev_output = [record.copy() for record in pysam.VariantFile(args.O, header=header)]
         precomputed_outputs = read_outputs(prev_output)
         print(f"Found precomputed {len(precomputed_outputs)} records")
     try:
