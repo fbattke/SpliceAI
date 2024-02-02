@@ -89,8 +89,9 @@ def main():
     if len(precomputed_outputs) > 0:
         for record in prev_output:
             output.write(record)
+    n_total_vcfs = sum([1 for _ in vcf])
 
-    for record in tqdm(vcf):
+    for record in tqdm(vcf, total=n_total_vcfs, desc="Number of variants"):
         if format_vcf_record(record) in precomputed_outputs:
             continue
 
