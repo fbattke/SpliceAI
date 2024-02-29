@@ -5,6 +5,7 @@ import pysam
 from spliceai.utils import Annotator, get_delta_scores
 from tqdm import tqdm
 from pathlib import Path
+from time import time
 
 
 try:
@@ -36,6 +37,11 @@ def get_options():
                         type=int, choices=[0, 1],
                         help='mask scores representing annotated acceptor/donor gain and '
                              'unannotated acceptor/donor loss, defaults to 0')
+    parser.add_argument('-S', metavar='skip', dest="skip_chr", default=None,
+                        help='Skip variants with the assigned chromosomes. '
+                             'The input will be splitted into chromosome numbers based on the commas in the input string.'
+                             'Ignored if this argument is not used.'
+                             'Example: "1", "1,2,3,M", and "M,Y"')
     args = parser.parse_args()
 
     return args
@@ -72,6 +78,10 @@ def main():
                     'annotation. These include delta scores (DS) and delta positions (DP) for '
                     'acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). '
                     'Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL">')
+    skip_chrs = []
+    if args.skip_chr is not None:
+        skip_chrs = args.skip_chr.split(",")
+        print(f"Variants located on the chromosome {skip_chrs} will not be scored.")
 
     precomputed_outputs = []
     prev_output = None
@@ -91,15 +101,33 @@ def main():
             output.write(record)
     n_total_vcfs = sum([1 for _ in vcf])
 
+    start_t = time()
+    n_actual, n_skip_chr, n_skip_seq = 0, 0, 0
     for record in tqdm(vcf, total=n_total_vcfs, desc="Number of variants"):
         if format_vcf_record(record) in precomputed_outputs:
+            continue
+
+        if f"{record.chrom}" in skip_chrs:
+            output.write(record)
+            n_skip_chr += 1
             continue
 
         scores = get_delta_scores(record, ann, args.D, args.M)
         if len(scores) > 0:
             record.info['SpliceAI'] = scores
+            n_actual += 1
+        else:
+            n_skip_seq += 1
         output.write(record)
+    end_t = time()
 
+    print(f"Finished the whole process in {end_t - start_t} secs.")
+    print(f"Skipped {len(precomputed_outputs)} precomputed results.")
+    print(f"Skipped {n_skip_chr} variants on the skipped chromosomes.")
+    print(f"Skipped {n_skip_seq} variants dues to sequence or reference genome issues.")
+    print(f"Scored {n_actual} variants")
+    print(f"Elapsed time per variant (actually calculated): {(end_t - start_t) / n_actual}")
+    
     vcf.close()
     output.close()
 

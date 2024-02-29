@@ -54,7 +54,7 @@ class Annotator:
         else:
             return [], [], []
 
-    def get_pos_data(self, idx, pos):
+    def get_pos_data(self, idx, pos) -> (float, float, float):
 
         dist_tx_start = self.tx_starts[idx]-pos
         dist_tx_end = self.tx_ends[idx]-pos
