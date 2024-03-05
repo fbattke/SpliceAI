@@ -99,7 +99,7 @@ def main():
     if len(precomputed_outputs) > 0:
         for record in prev_output:
             output.write(record)
-    n_total_vcfs = sum([1 for _ in vcf])
+    n_total_vcfs = len(vcf)
 
     start_t = time()
     n_actual, n_skip_chr, n_skip_seq, n_skip_precomputed = 0, 0, 0, 0
