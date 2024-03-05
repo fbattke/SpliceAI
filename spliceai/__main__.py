@@ -108,11 +108,12 @@ def main():
             n_skip_precomputed += 1
             continue
 
+        print(f"{record.chrom}")
         if f"{record.chrom}" in skip_chrs:
             output.write(record)
             n_skip_chr += 1
             continue
-
+        print(f"{record.chrom}")
         scores = get_delta_scores(record, ann, args.D, args.M)
         if len(scores) > 0:
             record.info['SpliceAI'] = scores
