@@ -104,6 +104,7 @@ def main():
     start_t = time()
     n_actual, n_skip_chr, n_skip_seq, n_skip_precomputed = 0, 0, 0, 0
     for record in tqdm(vcf, total=n_total_vcfs, desc="Number of variants"):
+        print(format_vcf_record(record))
         if format_vcf_record(record) in precomputed_outputs:
             n_skip_precomputed += 1
             continue
