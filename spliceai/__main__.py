@@ -69,6 +69,11 @@ def main():
 
     try:
         vcf = pysam.VariantFile(args.I)
+        n_total_vcfs = sum([1 for _ in vcf])
+
+        print(f"Input data contains {n_total_vcfs} variants")
+        vcf = pysam.VariantFile(args.I)
+
     except (IOError, ValueError) as e:
         logging.error('{}'.format(e))
         exit()
@@ -99,7 +104,6 @@ def main():
     if len(precomputed_outputs) > 0:
         for record in prev_output:
             output.write(record)
-    n_total_vcfs = len(vcf)
 
     start_t = time()
     n_actual, n_skip_chr, n_skip_seq, n_skip_precomputed = 0, 0, 0, 0
@@ -110,7 +114,7 @@ def main():
             continue
 
         print(f"{record.chrom}")
-        if f"{record.chrom}" in skip_chrs:
+        if f"{record.chrom}" in skip_chrs or f"chr{record.chrom}" in skip_chrs:
             output.write(record)
             n_skip_chr += 1
             continue
