@@ -102,9 +102,10 @@ def main():
     n_total_vcfs = sum([1 for _ in vcf])
 
     start_t = time()
-    n_actual, n_skip_chr, n_skip_seq = 0, 0, 0
+    n_actual, n_skip_chr, n_skip_seq, n_skip_precomputed = 0, 0, 0, 0
     for record in tqdm(vcf, total=n_total_vcfs, desc="Number of variants"):
         if format_vcf_record(record) in precomputed_outputs:
+            n_skip_precomputed += 1
             continue
 
         if f"{record.chrom}" in skip_chrs:
@@ -122,11 +123,12 @@ def main():
     end_t = time()
 
     print(f"Finished the whole process in {end_t - start_t} secs.")
-    print(f"Skipped {len(precomputed_outputs)} precomputed results.")
+    print(f"Skipped {n_skip_precomputed} precomputed results.")
     print(f"Skipped {n_skip_chr} variants on the skipped chromosomes.")
     print(f"Skipped {n_skip_seq} variants dues to sequence or reference genome issues.")
     print(f"Scored {n_actual} variants")
-    print(f"Elapsed time per variant (actually calculated): {(end_t - start_t) / n_actual}")
+    if n_actual != 0:
+        print(f"Elapsed time per variant (actually calculated): {(end_t - start_t) / n_actual}")
     
     vcf.close()
     output.close()
