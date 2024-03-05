@@ -70,7 +70,6 @@ def main():
     try:
         vcf = pysam.VariantFile(args.I)
         n_total_vcfs = sum([1 for _ in vcf])
-
         print(f"Input data contains {n_total_vcfs} variants")
         vcf = pysam.VariantFile(args.I)
 
@@ -108,17 +107,13 @@ def main():
     start_t = time()
     n_actual, n_skip_chr, n_skip_seq, n_skip_precomputed = 0, 0, 0, 0
     for record in tqdm(vcf, total=n_total_vcfs, desc="Number of variants"):
-        print(format_vcf_record(record))
         if format_vcf_record(record) in precomputed_outputs:
             n_skip_precomputed += 1
             continue
-
-        print(f"{record.chrom}")
         if f"{record.chrom}" in skip_chrs or f"chr{record.chrom}" in skip_chrs:
             output.write(record)
             n_skip_chr += 1
             continue
-        print(f"{record.chrom}")
         scores = get_delta_scores(record, ann, args.D, args.M)
         if len(scores) > 0:
             record.info['SpliceAI'] = scores
