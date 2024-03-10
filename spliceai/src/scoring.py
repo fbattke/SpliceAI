@@ -284,7 +284,7 @@ def annotate(nthreads: int,
     # we need to flatten this list while keeping track of original positions to
     # reconstruct the nested structure later on
     flattened = list(chain.from_iterable(
-        [(i, rec) for rec in recs] for i, (recs, _) in enumerate(preprocessed)
+        [(i, rec) for rec in recs] for i, (recs, _, _) in enumerate(preprocessed)
     ))
     # alternative sequence have variable length; since Keras models require an
     # array as their input, we will have to sort and group preprocessed alleles
