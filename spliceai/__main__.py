@@ -9,6 +9,7 @@ from spliceai import annotations, models
 from tqdm import tqdm
 from pathlib import Path
 from time import time
+from datetime import datetime
 from tensorflow.keras.models import Model, load_model
 from dataclasses import dataclass
 import shutil
@@ -25,7 +26,6 @@ try:
     from importlib import resources
 except ImportError:
     import importlib_resources as resources
-
 
 
 ANNOTATIONS = {
@@ -133,7 +133,26 @@ def log_process_info(var_counter: VariantCounter):
     print(f"Skipped {var_counter.n_skip_seq} variants dues to sequence or reference genome issues.")
     print(f"Scored {var_counter.n_actual} variants")
     var_counter.cal_avg_time()
-    print(f"Elapsed time per variant (actually calculated): {var_counter.avg_cal_time}")
+    print(f"Consumed time per variant (actually calculated): {var_counter.avg_cal_time}")
+
+
+def save_to_precomputed(vcf_file_name, dest_dir, time_as_suffix=True):
+    output_fn = Path(vcf_file_name).stem
+
+    if time_as_suffix:
+        current_time = datetime.now()
+        formatted_time = f'{current_time:%Y-%m-%d %H:%M:%S}'
+        output_fn += f"_{formatted_time}"
+    output_fn = (Path(dest_dir) / output_fn).with_suffix(Path(vcf_file_name).suffix)
+
+    vcf_file = pysam.VariantFile(vcf_file_name)
+    new_vcf = pysam.VariantFile(output_fn.absolute(), mode="w", header=vcf_file.header)
+
+    for record in vcf_file:
+        if "SpliceAI" in record.info:
+            new_vcf.write(record)
+
+    pysam.tabix_index(output_fn.absolute(), preset="vcf", force=True)
 
 
 def spliceai(input,
@@ -195,10 +214,14 @@ def spliceai(input,
 
     precomputed_vars = [pysam.VariantFile(fn.with_suffix("")) for fn in pc_file_dir.iterdir() if fn.suffix == ".tbi"]
 
+    start_t = time()
     with tqdm(total=n_total_vcfs, desc="Number of variants") as pbar:
         for batch in input_batches:
             # for every input variant `annotate` returns a list of annotation
             # strings and an optional logging message
+            current_time = datetime.now()
+            formatted_time = f'{current_time:%Y-%m-%d %H:%M:%S}'
+
             scores = annotate(
                 preprocessing_threads,
                 reference,
@@ -212,7 +235,7 @@ def spliceai(input,
             )
             for variant, (scores_, message) in zip(batch, scores):
                 if message:
-                    logging.error(message)
+                    pbar.write(f"{formatted_time} {message}")
                 variant.info['SpliceAI'] = scores_
                 vcf_output.write(variant)
                 pbar.update(1)
@@ -221,6 +244,14 @@ def spliceai(input,
                                  f"{var_counter.n_actual} Calculated,"
                                  f"{var_counter.n_skip_chr} Skipped (matched skip_chroms),"
                                  f"{var_counter.n_skip_seq} Skipped (sequence or reference issues)")
+    end_t = time()
+    var_counter.start_time = start_t
+    var_counter.end_time = end_t
+
+    log_process_info(var_counter)
+    if save_computed:
+        save_to_precomputed(output, pc_file_dir, time_as_suffix=True)
+
 
 
 if __name__ == '__main__':
