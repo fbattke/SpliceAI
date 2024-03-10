@@ -356,8 +356,8 @@ def annotate(nthreads: int,
     precomputed_scores = [x[2] for x in preprocessed]
 
     variant_counter.n_actual += len(annotations)
-    variant_counter.n_skip_seq += len([ms for ms in messages if "SKIP_CHROM" not in ms])
-    variant_counter.n_skip_chr += len([ms for ms in messages if "SKIP_CHROM" in ms])
+    variant_counter.n_skip_seq += len([ms for ms in messages if ms is not None and "SKIP_CHROM" not in ms])
+    variant_counter.n_skip_chr += len([ms for ms in messages if ms is not None and "SKIP_CHROM" in ms])
     variant_counter.n_skip_precomputed += len([pc_scores for pc_scores in precomputed_scores if len(pc_scores) != 0])
 
     # messages are sorted the same way as input variants, so we can simply
