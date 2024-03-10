@@ -21,7 +21,10 @@ PreprocessedAllele = t.NamedTuple('PreprocessedAllele', [
 def match_precomputed(precomputed_variants,
                       chrom, pos, ref, alt) -> t.Optional[str]:
     for pc_var in precomputed_variants:
-        for record in pc_var.fetch(chrom, pos, pos+1):
+        valid_contigs = [cont for cont in pc_var.header.contigs]
+        is_long_format = any([cont.startswith("chr") for cont in valid_contigs])
+        normed_chrom = format_chromosome(is_long_format, chrom)
+        for record in pc_var.fetch(normed_chrom, pos, pos+1):
             for i, pc_alt in enumerate(record.alts):
                 if not (record.pos == pos and record.ref == ref and pc_alt == alt):  # we assume the vcfs are normalized
                     continue
