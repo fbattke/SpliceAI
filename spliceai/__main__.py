@@ -201,7 +201,7 @@ def spliceai(input,
 
     pc_file_dir = Path(precomputed_files_dir) / f"{'raw' if not mask else 'masked'}/{annotations}"
     if Path(output).is_file():
-        copied_fn = pc_file_dir / output.name
+        copied_fn = pc_file_dir / Path(output).name
         shutil.copy2(output, copied_fn)
         pysam.tabix_index(str(copied_fn), preset="vcf", force=True)
 
