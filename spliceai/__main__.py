@@ -89,7 +89,7 @@ def get_options():
                              'based on the commas in the input string.'
                              'Ignored if this argument is not used.'
                              'Example: "1", "1,2,3,M", and "M,Y"')
-    parser.add_argument("-c", "--precomputed", dest="precomputed_dir", default=None,
+    parser.add_argument("-c", "--precomputed", dest="precomputed_dir", default="precomputed",
                         )
     parser.add_argument("-t", "--n_threads", dest="n_threads", default=4,
                         help='The number of preprocessing threads to use. If your '
@@ -175,6 +175,9 @@ def spliceai(input,
         'acceptor gain (AG), acceptor loss (AL), donor gain (DG), and donor loss (DL). '
         'Format: ALLELE|SYMBOL|DS_AG|DS_AL|DS_DG|DS_DL|DP_AG|DP_AL|DP_DG|DP_DL">'
     )
+
+    if (Path(__file__).parent / precomputed_files_dir).is_dir():
+        precomputed_files_dir = Path(__file__).parent / precomputed_files_dir
 
     pc_file_dir = Path(precomputed_files_dir) / f"{'raw' if mask else 'masked'}/{annotations}"
     if Path(output).is_file():
