@@ -103,7 +103,7 @@ def get_options():
                              'preprocessing overhead. It is safe to keep the default '
                              'value. Defaults to 1024')
 
-    parser.add_argument("-p", "--n_predict_batch", dest="n_pred_batch", default=128,
+    parser.add_argument("-p", "--n_predict_batch", dest="n_predict_batch", default=128,
                         help='The batch size to use during inference. This option is '
                              'useful if you are using a GPU and want to exploit its full '
                              'potential. It is best to use powers of 2. If you are '
@@ -218,7 +218,7 @@ def spliceai(input,
     precomputed_vars = [pysam.VariantFile(fn.with_suffix("")) for fn in pc_file_dir.iterdir() if fn.suffix == ".tbi"]
 
     start_t = time()
-    with tqdm(total=n_total_vcfs, desc="Number of variants") as pbar:
+    with tqdm(total=n_total_vcfs, desc="Number of variants", file=sys.stdout) as pbar:
         for batch in input_batches:
             # for every input variant `annotate` returns a list of annotation
             # strings and an optional logging message
@@ -244,9 +244,9 @@ def spliceai(input,
                 vcf_output.write(variant)
                 pbar.update(1)
             pbar.set_description(f"Processed: "
-                                 f"{var_counter.n_skip_precomputed} Precomputed,"
-                                 f"{var_counter.n_actual} Calculated,"
-                                 f"{var_counter.n_skip_chr} Skipped (matched skip_chroms),"
+                                 f"{var_counter.n_skip_precomputed} Precomputed, "
+                                 f"{var_counter.n_actual} Calculated, "
+                                 f"{var_counter.n_skip_chr} Skipped (matched skip_chroms), "
                                  f"{var_counter.n_skip_seq} Skipped (sequence or reference issues)")
     end_t = time()
     var_counter.start_time = start_t
@@ -266,9 +266,9 @@ if __name__ == '__main__':
              annotations=args.annotation,
              distance=args.distance,
              mask=args.mask,
-             preprocessing_threads=args.n_threads,
-             preprocessing_batch=args.n_batch,
-             prediction_batch=args.n_pred_batch,
+             preprocessing_threads=int(args.n_threads),
+             preprocessing_batch=int(args.n_batch),
+             prediction_batch=int(args.n_predict_batch),
              precomputed_files_dir=args.precomputed_dir,
              skipped_chroms=args.skip_chr,
              save_computed=True)
