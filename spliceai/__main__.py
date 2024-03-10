@@ -251,11 +251,11 @@ def spliceai(input,
     end_t = time()
     var_counter.start_time = start_t
     var_counter.end_time = end_t
+    vcf_output.close()
 
     log_process_info(var_counter)
     if save_computed:
         save_to_precomputed(output, pc_file_dir, time_as_suffix=True)
-
 
 
 if __name__ == '__main__':

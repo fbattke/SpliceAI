@@ -24,7 +24,10 @@ def match_precomputed(precomputed_variants,
         valid_contigs = [cont for cont in pc_var.header.contigs]
         is_long_format = any([cont.startswith("chr") for cont in valid_contigs])
         normed_chrom = format_chromosome(is_long_format, chrom)
-        for record in pc_var.fetch(normed_chrom, pos, pos+1):
+        if normed_chrom not in valid_contigs:
+            continue
+        
+        for record in pc_var.fetch(normed_chrom, pos, pos+1, multiple_iterators=True):
             for i, pc_alt in enumerate(record.alts):
                 if not (record.pos == pos and record.ref == ref and pc_alt == alt):  # we assume the vcfs are normalized
                     continue
