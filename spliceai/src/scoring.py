@@ -17,27 +17,38 @@ PreprocessedAllele = t.NamedTuple('PreprocessedAllele', [
     ('d_exon_boundary', int), ('x_ref', np.ndarray), ('x_alt', np.ndarray)
 ])
 
+hash_pattern = "{chrom}_{ref}_{alts}_{pos}"
 
-def match_precomputed(precomputed_variants,
-                      chrom, pos, ref, alt) -> t.Optional[str]:
+
+def find_precomputed_subset(precomputed_variants,
+                            variants) -> dict:
+    precomp_score_dic = {}
+
+    used_chroms = list(set([v.chrom for v in variants]))
+    chrom_ranges = {chrom: [v.pos for v in variants if v.chrom == chrom] for chrom in used_chroms}
+    chrom_ranges = {chrom: [min(pos), max(pos)] for chrom, pos in chrom_ranges.items()}
     for pc_var in precomputed_variants:
         valid_contigs = [cont for cont in pc_var.header.contigs]
         is_long_format = any([cont.startswith("chr") for cont in valid_contigs])
-        normed_chrom = format_chromosome(is_long_format, chrom)
-        if normed_chrom not in valid_contigs:
-            continue
-        
-        for record in pc_var.fetch(normed_chrom, pos, pos+1, multiple_iterators=True):
-            for i, pc_alt in enumerate(record.alts):
-                if not (record.pos == pos and record.ref == ref and pc_alt == alt):  # we assume the vcfs are normalized
+        for chrom, (min_pos, max_pos) in chrom_ranges.items():
+
+            normed_chrom = format_chromosome(is_long_format, chrom)
+            if normed_chrom not in valid_contigs:
+                continue
+            for record in pc_var.fetch(normed_chrom, min_pos-1, max_pos + 1):
+                if not record.info["SpliceAI"]:
                     continue
-                return record.info["SpliceAI"][i]
-    return None
+                for alt, splice_score in zip(record.alts, record.info["SpliceAI"]):
+                    precomp_score_dic[hash_pattern.format(chrom=chrom,
+                                                          ref=record.ref,
+                                                          alts=alt,
+                                                          pos=record.pos)] = splice_score
+    return precomp_score_dic
 
 
 def preprocess(reference: Reference,
                dist_var: int,
-               precomputed_variants: t.Optional[t.List[VariantFile]],
+               precomp_score: dict,
                skipped_chroms,
                record: VariantRecord,
                ) \
@@ -60,8 +71,6 @@ def preprocess(reference: Reference,
 
     cov = 2 * dist_var + 1
     wid = 10000 + cov
-
-    precomputed_variants = precomputed_variants if precomputed_variants is not None else []
 
     try:  # skip due to pysam formatting issues
         record.chrom, record.pos, record.ref, len(record.alts)
@@ -109,12 +118,13 @@ def preprocess(reference: Reference,
             if len(record.ref) > 1 and len(alt) > 1:
                 continue
 
-            matched = match_precomputed(precomputed_variants=precomputed_variants,
-                                        chrom=chrom, pos=record.pos,
-                                        alt=alt, ref=record.ref)
-            if matched is not None:
+            hash_str = hash_pattern.format(chrom=chrom,
+                                           ref=record.ref,
+                                           alts=alt,
+                                           pos=record.pos)
+            if hash_str in precomp_score:
                 preprocessed_records.append([])
-                precomputed_scores.append(matched)
+                precomputed_scores.append(precomp_score[hash_str])
                 continue
 
             # get distance to transcript and exon boundaries
@@ -281,12 +291,21 @@ def annotate(nthreads: int,
     """
     # preprocess generates a list of PreprocessedAllele objects and an
     # optional logging message for every variant
+    precomputed_variants = precomputed_variants if precomputed_variants is not None else []
+
+    precomp_score = find_precomputed_subset(precomputed_variants=precomputed_variants,
+                                            variants=variants)
+
+
     if nthreads > 1:
         with ThreadPoolExecutor(nthreads) as workers:
-            preprocessed = list(workers.map(partial(preprocess, reference, dist_var,
-                                                    precomputed_variants, skipped_chroms), variants))
+            preprocessed = list(workers.map(partial(preprocess,
+                                                    reference,
+                                                    dist_var,
+                                                    precomp_score,
+                                                    skipped_chroms), variants))
     else:
-        preprocessed = [preprocess(reference, dist_var, precomputed_variants, skipped_chroms, var) for var in variants]
+        preprocessed = [preprocess(reference, dist_var, precomp_score, skipped_chroms, var) for var in variants]
     # we need to flatten this list while keeping track of original positions to
     # reconstruct the nested structure later on
     flattened = list(chain.from_iterable(
