@@ -79,7 +79,7 @@ def get_options():
                         type=int, choices=range(0, 5000),
                         help='maximum distance between the variant and gained/lost splice '
                              'site, defaults to 50')
-    parser.add_argument('-m', metavar='mask', default=False, dest="mask",
+    parser.add_argument('-m', "--mask", default=False, dest="mask",
                         action='store_true',
                         help='mask scores representing annotated acceptor/donor gain and '
                              'unannotated acceptor/donor loss, defaults to 0')
