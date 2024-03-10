@@ -165,6 +165,7 @@ def spliceai(input,
              preprocessing_batch,
              prediction_batch,
              precomputed_files_dir,
+             skipped_chroms,
              save_computed = True):
     # parse reference assembly and annotations
     try:
@@ -207,6 +208,8 @@ def spliceai(input,
     vcf_output = pysam.VariantFile(output, mode="w", header=header)
     var_counter = VariantCounter()
 
+    skipped_chroms = [] if skipped_chroms is None else skipped_chroms.split(",")
+
     # break input into batches
     input_batches = iterate_batches(preprocessing_batch, vcf_input)
 
@@ -231,7 +234,8 @@ def spliceai(input,
                 mask,
                 batch,
                 precomputed_vars,
-                var_counter
+                var_counter,
+                skipped_chroms
             )
             for variant, (scores_, message) in zip(batch, scores):
                 if message:
@@ -266,4 +270,5 @@ if __name__ == '__main__':
              preprocessing_batch=args.n_batch,
              prediction_batch=args.n_pred_batch,
              precomputed_files_dir=args.precomputed_dir,
+             skipped_chroms=args.skip_chr,
              save_computed=True)

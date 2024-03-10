@@ -32,7 +32,9 @@ def match_precomputed(precomputed_variants,
 def preprocess(reference: Reference,
                dist_var: int,
                precomputed_variants: t.Optional[t.List[VariantFile]],
-               record: VariantRecord) \
+               skipped_chroms,
+               record: VariantRecord,
+               ) \
         -> t.Tuple[t.List[PreprocessedAllele], t.Optional[str], t.List[str]]:
     """
     Preprocess a variant record.
@@ -61,6 +63,9 @@ def preprocess(reference: Reference,
         return [], f'Bad variant record: {record}', []
 
     chrom = format_chromosome(reference.long_chrom, record.chrom)
+    if chrom in [format_chromosome(reference.long_chrom, sc) for sc in skipped_chroms ]:
+        return [], f"SKIP_CHROM: {chrom}", []
+
     feature_indices = reference.feature_indices(chrom, record.pos)
     if not feature_indices:
         return [], f'No overlapping features for variant record: {record}', []
@@ -240,7 +245,8 @@ def annotate(nthreads: int,
              mask: bool,
              variants: t.List[VariantRecord],
              precomputed_variants: t.List[VariantFile],
-             variant_counter) \
+             variant_counter,
+             skipped_chroms) \
         -> t.List[t.Tuple[t.List[str], t.Optional[str]]]:
     """
     Calculate SpliceAI annotations for list of variants. Annotations are VCF
@@ -271,9 +277,10 @@ def annotate(nthreads: int,
     # optional logging message for every variant
     if nthreads > 1:
         with ThreadPoolExecutor(nthreads) as workers:
-            preprocessed = list(workers.map(partial(preprocess, reference, dist_var, precomputed_variants), variants))
+            preprocessed = list(workers.map(partial(preprocess, reference, dist_var,
+                                                    precomputed_variants, skipped_chroms), variants))
     else:
-        preprocessed = [preprocess(reference, dist_var, precomputed_variants, var) for var in variants]
+        preprocessed = [preprocess(reference, dist_var, precomputed_variants, skipped_chroms, var) for var in variants]
     # we need to flatten this list while keeping track of original positions to
     # reconstruct the nested structure later on
     flattened = list(chain.from_iterable(
