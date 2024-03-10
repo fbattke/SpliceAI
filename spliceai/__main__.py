@@ -199,7 +199,7 @@ def spliceai(input,
     if (Path(__file__).parent / precomputed_files_dir).is_dir():
         precomputed_files_dir = Path(__file__).parent / precomputed_files_dir
 
-    pc_file_dir = Path(precomputed_files_dir) / f"{'raw' if mask else 'masked'}/{annotations}"
+    pc_file_dir = Path(precomputed_files_dir) / f"{'raw' if not mask else 'masked'}/{annotations}"
     if Path(output).is_file():
         copied_fn = pc_file_dir / output.name
         shutil.copy2(output, copied_fn)
