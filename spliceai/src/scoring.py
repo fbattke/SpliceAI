@@ -351,7 +351,7 @@ def annotate(nthreads: int,
         i: list(map(op.itemgetter(1), grp))
         for i, grp in groupby(annotations_sorted, key=op.itemgetter(0))
     }
-    messages = map(op.itemgetter(1), preprocessed)
+    messages = [x[1] for x in preprocessed]
     precomputed_scores = [x[2] for x in preprocessed]
 
     variant_counter.n_actual += len(annotations)
@@ -363,5 +363,5 @@ def annotate(nthreads: int,
     # iterate enumerate(messages) to get corresponding annotations
     result = [(annotations_lookup.get(i, []), message) if len(pc_scores) == 0 else (pc_scores, message)
             for i, (message, pc_scores) in enumerate(zip(list(messages), precomputed_scores))]
-    print(list(messages))
+    print(messages)
     return result
