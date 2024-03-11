@@ -237,6 +237,7 @@ def spliceai(input,
                 var_counter,
                 skipped_chroms
             )
+            print(f"Processed {len(batch)} data with {len(scores)} scores")
             for variant, (scores_, message) in zip(batch, scores):
                 if message:
                     pbar.write(f"{formatted_time} {message}")
