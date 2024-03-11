@@ -110,6 +110,10 @@ def get_options():
                              'getting out of memory errors, you should reduce the '
                              'batch size. Defaults to 64')
 
+    parser.add_argument("-l", "--log_file", dest="log_file", default="./log",
+                        help='Name of the file to store messages. '
+                             'To prevent overwriting, a timestamp will be added to the file name')
+
     args = parser.parse_args()
 
     return args
@@ -166,6 +170,7 @@ def spliceai(input,
              prediction_batch,
              precomputed_files_dir,
              skipped_chroms,
+             log_file_name,
              save_computed = True):
     # parse reference assembly and annotations
     try:
@@ -217,8 +222,13 @@ def spliceai(input,
 
     precomputed_vars = [pysam.VariantFile(fn.with_suffix("")) for fn in pc_file_dir.iterdir() if fn.suffix == ".tbi"]
 
+    formatted_time = f'{datetime.now():%Y-%m-%d %H:%M:%S}'
+    log_fn = Path(Path(log_file_name).name + f"_{formatted_time}").with_suffix(Path(log_file_name).suffix)
     start_t = time()
-    with tqdm(total=n_total_vcfs, desc="Number of variants", file=sys.stdout) as pbar:
+
+    print(f"Start Processing. Messages will be stored at {log_fn}")
+    with tqdm(total=n_total_vcfs, desc="Number of variants", file=open(log_fn, 'w')) as pbar:
+
         for batch in input_batches:
             # for every input variant `annotate` returns a list of annotation
             # strings and an optional logging message
@@ -271,4 +281,5 @@ if __name__ == '__main__':
              prediction_batch=int(args.n_predict_batch),
              precomputed_files_dir=args.precomputed_dir,
              skipped_chroms=args.skip_chr,
+             log_file_name=args.log_file,
              save_computed=True)

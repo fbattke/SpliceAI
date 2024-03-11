@@ -329,7 +329,7 @@ def annotate(nthreads: int,
 
     def predict_batch(batch: np.ndarray) -> np.ndarray:
         # make prediction with each model
-        predictions = [model.predict(batch, batch_size) for model in models]
+        predictions = [model.predict(batch, batch_size, verbose=0) for model in models]
         # calculate average prediction across models
         return np.mean(predictions, axis=0)
 
