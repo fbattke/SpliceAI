@@ -227,37 +227,38 @@ def spliceai(input,
     start_t = time()
 
     print(f"Start Processing. Messages will be stored at {log_fn}")
-    with tqdm(total=n_total_vcfs, desc="Number of variants", file=open(log_fn, 'w')) as pbar:
 
-        for batch in input_batches:
-            # for every input variant `annotate` returns a list of annotation
-            # strings and an optional logging message
-            current_time = datetime.now()
-            formatted_time = f'{current_time:%Y-%m-%d %H:%M:%S}'
+    with open(log_fn, "w") as log_f:
+        with tqdm(total=n_total_vcfs, desc="Number of variants", file=sys.stdout) as pbar:
+            for batch in input_batches:
+                # for every input variant `annotate` returns a list of annotation
+                # strings and an optional logging message
+                current_time = datetime.now()
+                formatted_time = f'{current_time:%Y-%m-%d %H:%M:%S}'
 
-            scores = annotate(
-                preprocessing_threads,
-                reference,
-                sp_models,
-                prediction_batch,
-                distance,
-                mask,
-                batch,
-                precomputed_vars,
-                var_counter,
-                skipped_chroms
-            )
-            for variant, (scores_, message) in zip(batch, scores):
-                if message:
-                    pbar.write(f"{formatted_time} {message}")
-                variant.info['SpliceAI'] = scores_
-                vcf_output.write(variant)
-                pbar.update(1)
-            pbar.set_description(f"Processed: "
-                                 f"{var_counter.n_skip_precomputed} Precomputed, "
-                                 f"{var_counter.n_actual} Calculated, "
-                                 f"{var_counter.n_skip_chr} Skipped (matched skip_chroms), "
-                                 f"{var_counter.n_skip_seq} Skipped (sequence or reference issues)")
+                scores = annotate(
+                    preprocessing_threads,
+                    reference,
+                    sp_models,
+                    prediction_batch,
+                    distance,
+                    mask,
+                    batch,
+                    precomputed_vars,
+                    var_counter,
+                    skipped_chroms
+                )
+                for variant, (scores_, message) in zip(batch, scores):
+                    if message:
+                        log_f.write(f"{formatted_time} {message}")
+                    variant.info['SpliceAI'] = scores_
+                    vcf_output.write(variant)
+                    pbar.update(1)
+                pbar.set_description(f"Processed: "
+                                     f"{var_counter.n_skip_precomputed} Precomputed, "
+                                     f"{var_counter.n_actual} Calculated, "
+                                     f"{var_counter.n_skip_chr} Skipped (matched skip_chroms), "
+                                     f"{var_counter.n_skip_seq} Skipped (sequence or reference issues)")
     end_t = time()
     var_counter.start_time = start_t
     var_counter.end_time = end_t
