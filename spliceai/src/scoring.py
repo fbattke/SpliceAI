@@ -359,8 +359,9 @@ def annotate(nthreads: int,
     variant_counter.n_skip_chr += len([ms for ms in messages if ms is not None and "SKIP_CHROM" in ms])
     variant_counter.n_skip_precomputed += len([pc_scores for pc_scores in precomputed_scores if len(pc_scores) != 0])
 
-    print(messages, precomputed_scores)
     # messages are sorted the same way as input variants, so we can simply
     # iterate enumerate(messages) to get corresponding annotations
-    return [(annotations_lookup.get(i, []), message) if len(pc_scores) == 0 else (pc_scores, message)
+    result = [(annotations_lookup.get(i, []), message) if len(pc_scores) == 0 else (pc_scores, message)
             for i, (message, pc_scores) in enumerate(zip(messages, precomputed_scores))]
+    print(result)
+    return result
