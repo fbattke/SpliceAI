@@ -152,7 +152,6 @@ def preprocess(reference: Reference,
                 record.ref, alt, gene, strand, d_exon_boundary, x_ref, x_alt
             )
             preprocessed_records.append(preprocessed_record)
-            precomputed_scores.append([])
     return preprocessed_records, None, precomputed_scores
 
 
