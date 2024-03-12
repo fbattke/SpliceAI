@@ -107,6 +107,7 @@ def preprocess(reference: Reference,
     precomputed_scores = []
     n_calc, n_pre_calc = 0, 0
     # loop through all combinations of alternate alleles and feature indices
+    hash_str = ""
     for idx in feature_indices:
         gene = reference.genes[idx]
         strand = reference.strands[idx]
@@ -155,7 +156,8 @@ def preprocess(reference: Reference,
             preprocessed_records.append(preprocessed_record)
             n_calc += 1
     return preprocessed_records, f"Number of actual calculation: {n_calc}; " \
-                                 f"Number of used precomputed results {n_pre_calc}", precomputed_scores
+                                 f"Number of used precomputed results {n_pre_calc}: " \
+                                 f"last_hash: {hash_str} record:{record}", precomputed_scores
 
 
 def postprocess(dist_var: int,
