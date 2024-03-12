@@ -36,7 +36,7 @@ def find_precomputed_subset(precomputed_variants,
             if normed_chrom not in valid_contigs:
                 continue
             for record in pc_var.fetch(normed_chrom, min_pos-1, max_pos + 1):
-                if not record.info["SpliceAI"]:
+                if "SpliceAI" not in record.info:
                     continue
                 for alt, splice_score in zip(record.alts, record.info["SpliceAI"]):
                     precomp_score_dic[hash_pattern.format(chrom=chrom,
@@ -105,6 +105,7 @@ def preprocess(reference: Reference,
 
     preprocessed_records = []
     precomputed_scores = []
+    n_calc, n_pre_calc = 0, 0
     # loop through all combinations of alternate alleles and feature indices
     for idx in feature_indices:
         gene = reference.genes[idx]
@@ -124,6 +125,7 @@ def preprocess(reference: Reference,
                                            pos=record.pos)
             if hash_str in precomp_score:
                 precomputed_scores.append(precomp_score[hash_str])
+                n_pre_calc += 1
                 continue
 
             # get distance to transcript and exon boundaries
@@ -151,7 +153,9 @@ def preprocess(reference: Reference,
                 record.ref, alt, gene, strand, d_exon_boundary, x_ref, x_alt
             )
             preprocessed_records.append(preprocessed_record)
-    return preprocessed_records, None, precomputed_scores
+            n_calc += 1
+    return preprocessed_records, f"Number of actual calculation: {n_calc}; " \
+                                 f"Number of used precomputed results {n_pre_calc}", precomputed_scores
 
 
 def postprocess(dist_var: int,
@@ -354,7 +358,9 @@ def annotate(nthreads: int,
     precomputed_scores = [x[2] for x in preprocessed]
 
     variant_counter.n_actual += len(annotations)
-    variant_counter.n_skip_seq += len([ms for ms in messages if ms is not None and "SKIP_CHROM" not in ms])
+    variant_counter.n_skip_seq += len([ms for ms in messages if ms is not None and
+                                       "SKIP_CHROM" not in ms and
+                                       "actual calculation" not in ms])
     variant_counter.n_skip_chr += len([ms for ms in messages if ms is not None and "SKIP_CHROM" in ms])
     variant_counter.n_skip_precomputed += len([pc_scores for pc_scores in precomputed_scores if len(pc_scores) != 0])
 

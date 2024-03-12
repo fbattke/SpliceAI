@@ -242,6 +242,7 @@ def spliceai(input,
     # load precomputed scores via vcf
 
     precomputed_vars = [pysam.VariantFile(fn.with_suffix("")) for fn in pc_file_dir.iterdir() if fn.suffix == ".tbi"]
+    print(f"Loaded precomputed variant file: {[fn.with_suffix('') for fn in pc_file_dir.iterdir() if fn.suffix == '.tbi']}")
 
     formatted_time = f'{datetime.now():%Y-%m-%d %H:%M:%S}'
     log_fn = Path(Path(log_file_name).name + f"_{formatted_time}").with_suffix(Path(log_file_name).suffix)
