@@ -123,7 +123,6 @@ def preprocess(reference: Reference,
                                            alts=alt,
                                            pos=record.pos)
             if hash_str in precomp_score:
-                preprocessed_records.append([])
                 precomputed_scores.append(precomp_score[hash_str])
                 continue
 

@@ -103,7 +103,7 @@ def get_options():
                              'preprocessing overhead. It is safe to keep the default '
                              'value. Defaults to 1024')
 
-    parser.add_argument("-p", "--n_predict_batch", dest="n_predict_batch", default=128,
+    parser.add_argument("-p", "--n_predict_batch", dest="n_predict_batch", default=32,
                         help='The batch size to use during inference. This option is '
                              'useful if you are using a GPU and want to exploit its full '
                              'potential. It is best to use powers of 2. If you are '
