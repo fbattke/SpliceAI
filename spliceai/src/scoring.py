@@ -36,7 +36,7 @@ def find_precomputed_subset(precomputed_variants,
             if normed_chrom not in valid_contigs:
                 continue
             for record in pc_var.fetch(normed_chrom, min_pos-1, max_pos + 1):
-                if "SpliceAI" not in record.info:
+                if not record.info["SpliceAI"]:
                     continue
                 for alt, splice_score in zip(record.alts, record.info["SpliceAI"]):
                     precomp_score_dic[hash_pattern.format(chrom=chrom,
