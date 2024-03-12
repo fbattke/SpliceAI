@@ -228,6 +228,7 @@ def spliceai(input,
 
     pc_file_dir = Path(precomputed_files_dir) / f"{'raw' if not mask else 'masked'}/{annotations}"
     if Path(output).is_file():
+        copied_fn = pc_file_dir / Path(output).name
         update_existing_lib(new_fn=Path(output), old_fn_target=copied_fn)
 
     vcf_output = pysam.VariantFile(output, mode="w", header=header)
