@@ -159,6 +159,28 @@ def save_to_precomputed(vcf_file_name, dest_dir, time_as_suffix=True):
     pysam.tabix_index(output_fn.absolute(), preset="vcf", force=True)
 
 
+def update_existing_lib(new_fn: Path, old_fn_target: Path) -> None:
+    old_fn_gz = old_fn_target.with_suffix(old_fn_target.suffix + ".gz")
+    if not old_fn_gz.is_file():
+        shutil.copy2(new_fn, old_fn_target)
+    else:
+        old_file = pysam.VariantFile(old_fn_gz)
+        new_file = pysam.VariantFile(new_fn)
+        updated_file = pysam.VariantFile(old_fn_target, mode="w", header=old_file.header)
+        print("Older precomputed file detected, trying to merge them")
+        record_infos = []
+        for record in tqdm(old_file, desc="Records copied from the old file "):
+            updated_file.write(record)
+            record_infos.append(format_vcf_record(record))
+        for record in tqdm(new_file, desc="Records copied from the new file "):
+            if format_vcf_record(record) in record_infos:
+                continue
+            updated_file.write(record)
+        updated_file.close()
+
+    pysam.tabix_index(str(old_fn_target), preset="vcf", force=True)
+
+
 def spliceai(input,
              output,
              ref_assembly,
@@ -206,9 +228,7 @@ def spliceai(input,
 
     pc_file_dir = Path(precomputed_files_dir) / f"{'raw' if not mask else 'masked'}/{annotations}"
     if Path(output).is_file():
-        copied_fn = pc_file_dir / Path(output).name
-        shutil.copy2(output, copied_fn)
-        pysam.tabix_index(str(copied_fn), preset="vcf", force=True)
+        update_existing_lib(new_fn=Path(output), old_fn_target=copied_fn)
 
     vcf_output = pysam.VariantFile(output, mode="w", header=header)
     var_counter = VariantCounter()
