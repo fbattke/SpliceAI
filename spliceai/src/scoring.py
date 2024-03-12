@@ -120,7 +120,7 @@ def preprocess(reference: Reference,
             if len(record.ref) > 1 and len(alt) > 1:
                 continue
 
-            hash_str = hash_pattern.format(chrom=chrom,
+            hash_str = hash_pattern.format(chrom=record.chrom,
                                            ref=record.ref,
                                            alts=alt,
                                            pos=record.pos)
