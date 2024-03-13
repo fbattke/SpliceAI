@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 from joblib import Parallel, delayed
+from joblib import wrap_non_picklable_objects
 
 import numpy as np
 from pysam import VariantRecord, VariantFile
@@ -162,6 +163,12 @@ def preprocess(reference: Reference,
                                  f"last_hash: {hash_str} record:{record}", precomputed_scores
 
 
+@wrap_non_picklable_objects
+@delayed
+def preprocess_joblib_ver(*args, **kwargs):
+    return preprocess(*args, **kwargs)
+
+
 def postprocess(dist_var: int,
                 mask: bool,
                 ref: str,
@@ -304,11 +311,12 @@ def annotate(nthreads: int,
 
 
     if nthreads > 1:
-        preprocessed = Parallel(n_jobs=nthreads)(delayed(partial(preprocess,
-                                                                 reference,
-                                                                 dist_var,
-                                                                 precomp_score,
-                                                                 skipped_chroms))(variant) for variant in variants)
+
+        preprocessed = Parallel(n_jobs=nthreads)(partial(preprocess_joblib_ver,
+                                                         reference,
+                                                         dist_var,
+                                                         precomp_score,
+                                                         skipped_chroms)(variant) for variant in variants)
         # with ThreadPoolExecutor(nthreads) as workers:
         #     preprocessed = list(workers.map(partial(preprocess,
         #                                             reference,
