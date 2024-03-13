@@ -1,3 +1,4 @@
+import dataclasses
 import typing as t
 import operator as op
 from itertools import chain, groupby
@@ -20,6 +21,19 @@ PreprocessedAllele = t.NamedTuple('PreprocessedAllele', [
     ('ref', str), ('alt', str), ('gene', str), ('strand', str),
     ('d_exon_boundary', int), ('x_ref', np.ndarray), ('x_alt', np.ndarray)
 ])
+
+
+class PicklableRecord:
+    def __init__(self, record: VariantRecord):
+        self.chrom = record.chrom
+        self.ref = record.ref
+        self.alts = record.alts
+        self.pos = record.pos
+        self.full_str = str(record)
+
+    def __str__(self):
+        return self.full_str
+
 
 hash_pattern = "{chrom}_{ref}_{alts}_{pos}"
 
@@ -54,7 +68,7 @@ def preprocess(reference: Reference,
                dist_var: int,
                precomp_score: dict,
                skipped_chroms,
-               record: VariantRecord,
+               record: PicklableRecord,
                ) \
         -> t.Tuple[t.List[PreprocessedAllele], t.Optional[str], t.List[str]]:
     """
@@ -317,7 +331,7 @@ def annotate(nthreads: int,
                                                     reference,
                                                     dist_var,
                                                     precomp_score,
-                                                    skipped_chroms), variants))
+                                                    skipped_chroms), [PicklableRecord(var) for var in variants]))
         # preprocessed = Parallel(n_jobs=nthreads)(partial(preprocess_joblib_ver,
         #                                                  reference,
         #                                                  dist_var,
