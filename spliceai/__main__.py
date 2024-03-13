@@ -166,14 +166,17 @@ def update_existing_lib(new_fn: Path, old_fn_target: Path) -> None:
     else:
         old_file = pysam.VariantFile(old_fn_gz)
         new_file = pysam.VariantFile(new_fn)
-        updated_file = pysam.VariantFile(old_fn_target, mode="w", header=old_file.header)
+        updated_file = pysam.VariantFile(old_fn_target, mode="w", header=new_file.header)
         print("Older precomputed file detected, trying to merge them")
         record_infos = []
         for record in tqdm(old_file, desc="Records copied from the old file "):
             updated_file.write(record)
             record_infos.append(format_vcf_record(record))
-        for record in tqdm(new_file, desc="Records copied from the new file "):
+        for i, record in tqdm(enumerate(new_file), desc="Records copied from the new file "):
             if format_vcf_record(record) in record_infos:
+                continue
+            if len(record.samples) != len(new_file.header.samples):
+                print(f"weird record in {i}: {record}")
                 continue
             updated_file.write(record)
         updated_file.close()
