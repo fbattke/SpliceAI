@@ -4,6 +4,8 @@ from itertools import chain, groupby
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
+from joblib import Parallel, delayed
+
 import numpy as np
 from pysam import VariantRecord, VariantFile
 
@@ -302,12 +304,17 @@ def annotate(nthreads: int,
 
 
     if nthreads > 1:
-        with ThreadPoolExecutor(nthreads) as workers:
-            preprocessed = list(workers.map(partial(preprocess,
-                                                    reference,
-                                                    dist_var,
-                                                    precomp_score,
-                                                    skipped_chroms), variants))
+        preprocessed = Parallel(n_jobs=nthreads)(delayed(partial(preprocess,
+                                                                 reference,
+                                                                 dist_var,
+                                                                 precomp_score,
+                                                                 skipped_chroms))(variant) for variant in variants)
+        # with ThreadPoolExecutor(nthreads) as workers:
+        #     preprocessed = list(workers.map(partial(preprocess,
+        #                                             reference,
+        #                                             dist_var,
+        #                                             precomp_score,
+        #                                             skipped_chroms), variants))
     else:
         preprocessed = [preprocess(reference, dist_var, precomp_score, skipped_chroms, var) for var in variants]
     # we need to flatten this list while keeping track of original positions to
