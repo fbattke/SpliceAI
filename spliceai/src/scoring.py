@@ -4,6 +4,7 @@ from itertools import chain, groupby
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
+import multiprocessing as mp
 from joblib import Parallel, delayed
 from joblib import wrap_non_picklable_objects
 
@@ -311,12 +312,17 @@ def annotate(nthreads: int,
 
 
     if nthreads > 1:
-
-        preprocessed = Parallel(n_jobs=nthreads)(partial(preprocess_joblib_ver,
-                                                         reference,
-                                                         dist_var,
-                                                         precomp_score,
-                                                         skipped_chroms)(variant) for variant in variants)
+        with mp.Pool(nthreads) as workers:
+            preprocessed = list(workers.map(partial(preprocess,
+                                                    reference,
+                                                    dist_var,
+                                                    precomp_score,
+                                                    skipped_chroms), variants))
+        # preprocessed = Parallel(n_jobs=nthreads)(partial(preprocess_joblib_ver,
+        #                                                  reference,
+        #                                                  dist_var,
+        #                                                  precomp_score,
+        #                                                  skipped_chroms)(variant) for variant in variants)
         # with ThreadPoolExecutor(nthreads) as workers:
         #     preprocessed = list(workers.map(partial(preprocess,
         #                                             reference,
