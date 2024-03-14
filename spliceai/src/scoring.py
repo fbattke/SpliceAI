@@ -97,39 +97,40 @@ def preprocess(reference: Reference,
     try:  # skip due to pysam formatting issues
         record.chrom, record.pos, record.ref, len(record.alts)
     except TypeError:
-        return [], f'Bad variant record: {record}, EST: {time() - start_t} sec', []
+        return [], f'Bad variant record, EST: {time() - start_t} sec. record={record}', []
 
     chrom = format_chromosome(reference.long_chrom, record.chrom)
     if chrom in [format_chromosome(reference.long_chrom, sc) for sc in skipped_chroms ]:
-        return [], f"SKIP_CHROM: {chrom}, EST: {time() - start_t} sec", []
+        return [], f"SKIP_CHROM: {chrom}, EST: {time() - start_t} sec. record={record}", []
 
     feature_indices = reference.feature_indices(chrom, record.pos)
     if not feature_indices:
-        return [], f'No overlapping features for variant record: {record}, EST: {time() - start_t} sec', []
+        return [], f'No overlapping features for variant record, EST: {time() - start_t} sec. record={record}', []
     # extract sequence from the reference; -1 in the left part of the slice
     # accounts for the fact that record.pos uses 1-based indexing, while Python
     # indexing is 0-based
     try:
         seq = reference.assembly[chrom][record.pos - wid // 2 - 1:record.pos + wid // 2].seq
     except (IndexError, ValueError):
-        return [], f'Cannot extract sequence for variant record: {record}, EST: {time() - start_t} sec', []
+        return [], f'Cannot extract sequence for variant record, EST: {time() - start_t} sec. record={record}', []
 
     # skip if the record reference allele doesn't match this segment in the
     # annotation sequence
     if seq[wid // 2:wid // 2 + len(record.ref)].upper() != record.ref:
-        return [], f'Reference sequence does not match reference allele: {record}, EST: {time() - start_t} sec', []
+        return [], f'Reference sequence does not match reference allele, EST: {time() - start_t} sec. record={record}', []
 
     if len(seq) != wid:
-        return [], f'The variant is too close to the chromosome end: {record}, EST: {time() - start_t} sec', []
+        return [], f'The variant is too close to the chromosome end, EST: {time() - start_t} sec. record={record}', []
 
     if len(record.ref) > 2 * dist_var:
-        return [],  f'The reference allele is too long: {record}, EST: {time() - start_t} sec', []
+        return [],  f'The reference allele is too long, EST: {time() - start_t} sec. record={record}', []
 
     preprocessed_records = []
     precomputed_scores = []
     n_calc, n_pre_calc = 0, 0
     # loop through all combinations of alternate alleles and feature indices
     hash_str = ""
+    mapping_et, mapping_st = 0, 0
     for idx in feature_indices:
         gene = reference.genes[idx]
         strand = reference.strands[idx]
@@ -141,7 +142,7 @@ def preprocess(reference: Reference,
                 continue
             if len(record.ref) > 1 and len(alt) > 1:
                 continue
-
+            mapping_st = time()
             hash_str = hash_pattern.format(chrom=record.chrom,
                                            ref=record.ref,
                                            alts=alt,
@@ -149,6 +150,7 @@ def preprocess(reference: Reference,
             if hash_str in precomp_score:
                 precomputed_scores.append(precomp_score[hash_str])
                 n_pre_calc += 1
+                mapping_et = time()
                 continue
 
             # get distance to transcript and exon boundaries
@@ -179,8 +181,9 @@ def preprocess(reference: Reference,
             n_calc += 1
     return preprocessed_records, f"Number of actual calculation: {n_calc}; " \
                                  f"Number of used precomputed results {n_pre_calc}; " \
-                                 f"Preprocessing time: {time() - start_t} sec."\
-                                 f"last_hash: {hash_str} record:{record}", precomputed_scores
+                                 f"Preprocessing time: {time() - start_t} sec." \
+                                 f"Time spent on mapping precomputed: {mapping_et - mapping_st} sec." \
+                                 f"last_hash: {hash_str}, record={record}", precomputed_scores
 
 
 @wrap_non_picklable_objects
