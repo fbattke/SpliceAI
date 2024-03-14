@@ -152,7 +152,7 @@ def preprocess(reference: Reference,
                 n_pre_calc += 1
                 mapping_et = time()
                 continue
-
+            mapping_et = time()
             # get distance to transcript and exon boundaries
             d_tx_start, d_tx_end, d_exon_boundary = reference.feature_distances(idx, record.pos)
             # use padding if the window goes outside of gene boundaries
