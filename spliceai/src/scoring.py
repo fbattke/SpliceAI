@@ -9,6 +9,8 @@ import multiprocessing as mp
 from joblib import Parallel, delayed
 from joblib import wrap_non_picklable_objects
 
+import ray
+
 import numpy as np
 from pysam import VariantRecord, VariantFile
 
@@ -184,6 +186,11 @@ def preprocess_joblib_ver(*args, **kwargs):
     return preprocess(*args, **kwargs)
 
 
+@ray.remote
+def preprocess_ray_ver(*args, **kwargs):
+    return preprocess(*args, **kwargs)
+
+
 def postprocess(dist_var: int,
                 mask: bool,
                 ref: str,
@@ -337,12 +344,20 @@ def annotate(nthreads: int,
         #                                                  dist_var,
         #                                                  precomp_score,
         #                                                  skipped_chroms)(variant) for variant in variants)
-        with ThreadPoolExecutor(nthreads) as workers:
-            preprocessed = list(workers.map(partial(preprocess,
-                                                    reference,
-                                                    dist_var,
-                                                    precomp_score,
-                                                    skipped_chroms), variants))
+        # with ThreadPoolExecutor(nthreads) as workers:
+        #     preprocessed = list(workers.map(partial(preprocess,
+        #                                             reference,
+        #                                             dist_var,
+        #                                             precomp_score,
+        #                                             skipped_chroms), variants))
+
+        remote_ref = ray.put(reference)
+        preprocessed = ray.get([preprocess_ray_ver.remote(remote_ref,
+                                                          dist_var,
+                                                          precomp_score,
+                                                          skipped_chroms,
+                                                          variant) for variant in variants])
+
     else:
         preprocessed = [preprocess(reference, dist_var, precomp_score, skipped_chroms, var) for var in variants]
     # we need to flatten this list while keeping track of original positions to
