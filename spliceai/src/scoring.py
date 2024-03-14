@@ -72,6 +72,7 @@ def preprocess(reference: Reference,
                precomp_score: dict,
                skipped_chroms,
                record: SerializableRecord,
+               lock=None,
                ) \
         -> t.Tuple[t.List[PreprocessedAllele], t.Optional[str], t.List[str]]:
     """
@@ -110,9 +111,12 @@ def preprocess(reference: Reference,
     # accounts for the fact that record.pos uses 1-based indexing, while Python
     # indexing is 0-based
 
-    print([i for i in reference.assembly.keys()])
     try:
-        seq = reference.assembly[chrom][record.pos - wid // 2 - 1:record.pos + wid // 2].seq
+        if lock is not None:
+            with lock:
+                seq = reference.assembly[chrom][record.pos - wid // 2 - 1:record.pos + wid // 2].seq
+        else:
+            seq = reference.assembly[chrom][record.pos - wid // 2 - 1:record.pos + wid // 2].seq
     except (IndexError, ValueError):
         return [], f'Cannot extract sequence for variant record, EST: {time() - start_t} sec. record={record}', []
 
@@ -361,13 +365,15 @@ def annotate(nthreads: int,
         #                                                   precomp_score,
         #                                                   skipped_chroms,
         #                                                   SerializableRecord(variant)) for variant in variants])
-
+        mp_manager = mp.Manager()
+        lock = mp_manager.Lock()
         with ThreadPoolExecutor(nthreads) as workers:
             preprocessed = list(workers.map(partial(preprocess,
                                                     reference,
                                                     dist_var,
                                                     precomp_score,
-                                                    skipped_chroms), variants))
+                                                    skipped_chroms,
+                                                    lock=lock), variants))
 
     else:
         preprocessed = [preprocess(reference, dist_var, precomp_score, skipped_chroms, var) for var in variants]
