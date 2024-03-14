@@ -109,6 +109,11 @@ def preprocess(reference: Reference,
     # extract sequence from the reference; -1 in the left part of the slice
     # accounts for the fact that record.pos uses 1-based indexing, while Python
     # indexing is 0-based
+
+
+
+
+
     try:
         seq = reference.assembly[chrom][record.pos - wid // 2 - 1:record.pos + wid // 2].seq
     except (IndexError, ValueError):
@@ -130,7 +135,6 @@ def preprocess(reference: Reference,
     n_calc, n_pre_calc = 0, 0
     # loop through all combinations of alternate alleles and feature indices
     hash_str = ""
-    mapping_et, mapping_st = 0, 0
     encoding_st = time()
     for idx in feature_indices:
         gene = reference.genes[idx]

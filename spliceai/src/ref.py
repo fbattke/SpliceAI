@@ -5,7 +5,7 @@ from itertools import groupby, count
 
 import numpy as np
 import pandas as pd
-from pyfaidx import Fasta, FastaRecord
+from pyfastx import Fasta
 from ncls import NCLS
 
 
@@ -31,7 +31,7 @@ class Reference:
     def __init__(self,
                  assembly: t.Union[Path, str],
                  annotations: t.Union[Path, str]):
-        self.assembly: t.Mapping[str, FastaRecord] = Fasta(assembly, rebuild=False)
+        self.assembly: t.Mapping[str, Any] = Fasta(assembly)
         # parse annotations
         try:
             annotations = (
