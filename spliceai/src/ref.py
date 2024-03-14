@@ -31,7 +31,7 @@ class Reference:
     def __init__(self,
                  assembly: t.Union[Path, str],
                  annotations: t.Union[Path, str]):
-        self.assembly: t.Mapping[str, Any] = Fasta(assembly)
+        self.assembly: t.Mapping[str, t.Any] = Fasta(assembly)
         # parse annotations
         try:
             annotations = (

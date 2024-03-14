@@ -110,10 +110,7 @@ def preprocess(reference: Reference,
     # accounts for the fact that record.pos uses 1-based indexing, while Python
     # indexing is 0-based
 
-
-
-
-
+    print([i for i in reference.assembly.keys()])
     try:
         seq = reference.assembly[chrom][record.pos - wid // 2 - 1:record.pos + wid // 2].seq
     except (IndexError, ValueError):
