@@ -1,4 +1,3 @@
-import dataclasses
 import typing as t
 import operator as op
 from itertools import chain, groupby
@@ -7,11 +6,6 @@ from functools import partial
 from time import time
 
 import multiprocessing as mp
-from joblib import Parallel, delayed
-from joblib import wrap_non_picklable_objects
-
-import ray
-
 import numpy as np
 from pysam import VariantRecord, VariantFile
 
@@ -194,17 +188,6 @@ def preprocess(reference: Reference,
                                  f"last_hash: {hash_str}, record={record}", precomputed_scores
 
 
-@wrap_non_picklable_objects
-@delayed
-def preprocess_joblib_ver(*args, **kwargs):
-    return preprocess(*args, **kwargs)
-
-
-@ray.remote
-def preprocess_ray_ver(*args, **kwargs):
-    return preprocess(*args, **kwargs)
-
-
 def postprocess(dist_var: int,
                 mask: bool,
                 ref: str,
@@ -348,23 +331,6 @@ def annotate(nthreads: int,
     precomp_time_msg = f"Precomputed score map built in {time() - st} sec. "
 
     if nthreads > 1:
-        # with mp.Pool(nthreads) as workers:
-        #     preprocessed = list(workers.map(partial(preprocess,
-        #                                             reference,
-        #                                             dist_var,
-        #                                             precomp_score,
-        #                                             skipped_chroms), [SerializableRecord(var) for var in variants]))
-        # preprocessed = Parallel(n_jobs=nthreads)(partial(preprocess_joblib_ver,
-        #                                                  reference,
-        #                                                  dist_var,
-        #                                                  precomp_score,
-        #                                                  skipped_chroms)(variant) for variant in variants)
-        # remote_ref = ray.put(reference)
-        # preprocessed = ray.get([preprocess_ray_ver.remote(remote_ref,
-        #                                                   dist_var,
-        #                                                   precomp_score,
-        #                                                   skipped_chroms,
-        #                                                   SerializableRecord(variant)) for variant in variants])
         mp_manager = mp.Manager()
         lock = mp_manager.Lock()
         with ThreadPoolExecutor(nthreads) as workers:
