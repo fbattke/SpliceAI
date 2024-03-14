@@ -4,6 +4,7 @@ import operator as op
 from itertools import chain, groupby
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from time import time
 
 import multiprocessing as mp
 from joblib import Parallel, delayed
@@ -25,7 +26,7 @@ PreprocessedAllele = t.NamedTuple('PreprocessedAllele', [
 ])
 
 
-class PicklableRecord:
+class SerializableRecord:
     def __init__(self, record: VariantRecord):
         self.chrom = record.chrom
         self.ref = record.ref
@@ -70,7 +71,7 @@ def preprocess(reference: Reference,
                dist_var: int,
                precomp_score: dict,
                skipped_chroms,
-               record: PicklableRecord,
+               record: SerializableRecord,
                ) \
         -> t.Tuple[t.List[PreprocessedAllele], t.Optional[str], t.List[str]]:
     """
@@ -88,6 +89,7 @@ def preprocess(reference: Reference,
     cannot afford the performance overhead of actual monads in Python).
     message
     """
+    start_t = time()
 
     cov = 2 * dist_var + 1
     wid = 10000 + cov
@@ -95,33 +97,33 @@ def preprocess(reference: Reference,
     try:  # skip due to pysam formatting issues
         record.chrom, record.pos, record.ref, len(record.alts)
     except TypeError:
-        return [], f'Bad variant record: {record}', []
+        return [], f'Bad variant record: {record}, EST: {time() - start_t} sec', []
 
     chrom = format_chromosome(reference.long_chrom, record.chrom)
     if chrom in [format_chromosome(reference.long_chrom, sc) for sc in skipped_chroms ]:
-        return [], f"SKIP_CHROM: {chrom}", []
+        return [], f"SKIP_CHROM: {chrom}, EST: {time() - start_t} sec", []
 
     feature_indices = reference.feature_indices(chrom, record.pos)
     if not feature_indices:
-        return [], f'No overlapping features for variant record: {record}', []
+        return [], f'No overlapping features for variant record: {record}, EST: {time() - start_t} sec', []
     # extract sequence from the reference; -1 in the left part of the slice
     # accounts for the fact that record.pos uses 1-based indexing, while Python
     # indexing is 0-based
     try:
         seq = reference.assembly[chrom][record.pos - wid // 2 - 1:record.pos + wid // 2].seq
     except (IndexError, ValueError):
-        return [], f'Cannot extract sequence for variant record: {record}', []
+        return [], f'Cannot extract sequence for variant record: {record}, EST: {time() - start_t} sec', []
 
     # skip if the record reference allele doesn't match this segment in the
     # annotation sequence
     if seq[wid // 2:wid // 2 + len(record.ref)].upper() != record.ref:
-        return [], f'Reference sequence does not match reference allele: {record}', []
+        return [], f'Reference sequence does not match reference allele: {record}, EST: {time() - start_t} sec', []
 
     if len(seq) != wid:
-        return [], f'The variant is too close to the chromosome end: {record}', []
+        return [], f'The variant is too close to the chromosome end: {record}, EST: {time() - start_t} sec', []
 
     if len(record.ref) > 2 * dist_var:
-        return [],  f'The reference allele is too long: {record}', []
+        return [],  f'The reference allele is too long: {record}, EST: {time() - start_t} sec', []
 
     preprocessed_records = []
     precomputed_scores = []
@@ -176,7 +178,8 @@ def preprocess(reference: Reference,
             preprocessed_records.append(preprocessed_record)
             n_calc += 1
     return preprocessed_records, f"Number of actual calculation: {n_calc}; " \
-                                 f"Number of used precomputed results {n_pre_calc}: " \
+                                 f"Number of used precomputed results {n_pre_calc}; " \
+                                 f"Preprocessing time: {time() - start_t} sec."\
                                  f"last_hash: {hash_str} record:{record}", precomputed_scores
 
 
@@ -328,9 +331,10 @@ def annotate(nthreads: int,
     # optional logging message for every variant
     precomputed_variants = precomputed_variants if precomputed_variants is not None else []
 
+    st = time()
     precomp_score = find_precomputed_subset(precomputed_variants=precomputed_variants,
                                             variants=variants)
-
+    precomp_time_msg = f"Precomputed score map built in {time() - st} sec. "
 
     if nthreads > 1:
         # with mp.Pool(nthreads) as workers:
@@ -338,25 +342,25 @@ def annotate(nthreads: int,
         #                                             reference,
         #                                             dist_var,
         #                                             precomp_score,
-        #                                             skipped_chroms), [PicklableRecord(var) for var in variants]))
+        #                                             skipped_chroms), [SerializableRecord(var) for var in variants]))
         # preprocessed = Parallel(n_jobs=nthreads)(partial(preprocess_joblib_ver,
         #                                                  reference,
         #                                                  dist_var,
         #                                                  precomp_score,
         #                                                  skipped_chroms)(variant) for variant in variants)
-        # with ThreadPoolExecutor(nthreads) as workers:
-        #     preprocessed = list(workers.map(partial(preprocess,
-        #                                             reference,
-        #                                             dist_var,
-        #                                             precomp_score,
-        #                                             skipped_chroms), variants))
+        # remote_ref = ray.put(reference)
+        # preprocessed = ray.get([preprocess_ray_ver.remote(remote_ref,
+        #                                                   dist_var,
+        #                                                   precomp_score,
+        #                                                   skipped_chroms,
+        #                                                   SerializableRecord(variant)) for variant in variants])
 
-        remote_ref = ray.put(reference)
-        preprocessed = ray.get([preprocess_ray_ver.remote(remote_ref,
-                                                          dist_var,
-                                                          precomp_score,
-                                                          skipped_chroms,
-                                                          variant) for variant in variants])
+        with ThreadPoolExecutor(nthreads) as workers:
+            preprocessed = list(workers.map(partial(preprocess,
+                                                    reference,
+                                                    dist_var,
+                                                    precomp_score,
+                                                    skipped_chroms), variants))
 
     else:
         preprocessed = [preprocess(reference, dist_var, precomp_score, skipped_chroms, var) for var in variants]
@@ -418,6 +422,6 @@ def annotate(nthreads: int,
 
     # messages are sorted the same way as input variants, so we can simply
     # iterate enumerate(messages) to get corresponding annotations
-    result = [(annotations_lookup.get(i, []), message) if len(pc_scores) == 0 else (pc_scores, message)
+    result = [(annotations_lookup.get(i, []), message) if len(pc_scores) == 0 else (pc_scores, precomp_time_msg+message)
             for i, (message, pc_scores) in enumerate(zip(list(messages), precomputed_scores))]
     return result
