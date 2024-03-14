@@ -124,13 +124,14 @@ def preprocess(reference: Reference,
 
     if len(record.ref) > 2 * dist_var:
         return [],  f'The reference allele is too long, EST: {time() - start_t} sec. record={record}', []
-
+    check_seq_time = time()
     preprocessed_records = []
     precomputed_scores = []
     n_calc, n_pre_calc = 0, 0
     # loop through all combinations of alternate alleles and feature indices
     hash_str = ""
     mapping_et, mapping_st = 0, 0
+    encoding_st = time()
     for idx in feature_indices:
         gene = reference.genes[idx]
         strand = reference.strands[idx]
@@ -183,6 +184,8 @@ def preprocess(reference: Reference,
                                  f"Number of used precomputed results {n_pre_calc}; " \
                                  f"Preprocessing time: {time() - start_t} sec." \
                                  f"Time spent on mapping precomputed: {mapping_et - mapping_st} sec." \
+                                 f"Time spent on encoding seq: {time() - encoding_st} sec." \
+                                 f"Time spent on checking sequence: {check_seq_time - start_t} sec." \
                                  f"last_hash: {hash_str}, record={record}", precomputed_scores
 
 
