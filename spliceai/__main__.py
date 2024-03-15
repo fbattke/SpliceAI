@@ -156,7 +156,7 @@ def save_to_precomputed(vcf_file_name, dest_dir, time_as_suffix=True):
         if "SpliceAI" in record.info:
             new_vcf.write(record)
 
-    pysam.tabix_index(output_fn.absolute(), preset="vcf", force=True)
+    pysam.tabix_index(str(output_fn.absolute()), preset="vcf", force=True)
 
 
 def update_existing_lib(new_fn: Path, old_fn_target: Path) -> None:
