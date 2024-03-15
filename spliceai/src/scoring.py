@@ -131,6 +131,8 @@ def preprocess(reference: Reference,
     # loop through all combinations of alternate alleles and feature indices
     hash_str = ""
     encoding_st = time()
+    mapping_et, mapping_st = 0, 0
+    
     for idx in feature_indices:
         gene = reference.genes[idx]
         strand = reference.strands[idx]
