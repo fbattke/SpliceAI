@@ -240,6 +240,7 @@ def spliceai(input,
 
     if fetched_pos is not None:
         f_chrom, f_start, f_end = parse_fetched_pos(fetched_pos)
+        f_start, f_end = int(f_start), int(f_end)
         build_index(Path(input), True)
         vcf_input = pysam.VariantFile(Path(Path(input).stem + '_indexed.vcf.gz'))
         tbi_iter = vcf_input.fetch(f_chrom, f_start, f_end)
