@@ -164,7 +164,7 @@ def build_index(vcf_file_name, check=True):
     new_fn = Path(vcf_file_name.stem + "_indexed.vcf")
     new_fn_gzipped = Path(vcf_file_name.stem + "_indexed.vcf.gz")
 
-    if new_fn_gzipped.is_file() and new_fn_gzipped.with_suffix("gz.tbi").is_file():
+    if new_fn_gzipped.is_file() and new_fn_gzipped.with_suffix(".gz.tbi").is_file():
         print("index file has been built, skipping this process")
         return
 
@@ -172,7 +172,7 @@ def build_index(vcf_file_name, check=True):
     pysam.tabix_index(str(new_fn.absolute()), preset="vcf", force=True)
     if check:
         assert new_fn_gzipped.is_file(), "file could not be copied.."
-        assert new_fn_gzipped.with_suffix("gz.tbi").is_file(), "no tbi file established, could be a pysam problem"
+        assert new_fn_gzipped.with_suffix(".gz.tbi").is_file(), "no tbi file established, could be a pysam problem"
 
 
 def update_existing_lib(new_fn: Path, old_fn_target: Path) -> None:
