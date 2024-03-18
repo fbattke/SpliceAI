@@ -171,8 +171,8 @@ def build_index(vcf_file_name, check=True):
     shutil.copy2(vcf_file_name, new_fn)
     pysam.tabix_index(str(new_fn.absolute()), preset="vcf", force=True)
     if check:
-        assert new_fn.is_file(), "file could not be copied.."
-        assert new_fn_gzipped.is_file(), "no tbi file established, could be a pysam problem"
+        assert new_fn_gzipped.is_file(), "file could not be copied.."
+        assert new_fn_gzipped.with_suffix(".tbi").is_file(), "no tbi file established, could be a pysam problem"
 
 
 def update_existing_lib(new_fn: Path, old_fn_target: Path) -> None:
