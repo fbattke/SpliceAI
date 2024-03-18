@@ -91,6 +91,7 @@ def get_options():
                              'Example: "1", "1,2,3,M", and "M,Y"')
     parser.add_argument("-c", "--precomputed", dest="precomputed_dir", default="precomputed",
                         )
+    parser.add_argument("-f", "--fetch", dest="fetch", default=None,)
     parser.add_argument("-t", "--n_threads", dest="n_threads", default=4,
                         help='The number of preprocessing threads to use. If your '
                              'reference assembly is located on a fast-access drive '
@@ -159,6 +160,21 @@ def save_to_precomputed(vcf_file_name, dest_dir, time_as_suffix=True):
     pysam.tabix_index(str(output_fn.absolute()), preset="vcf", force=True)
 
 
+def build_index(vcf_file_name, check=True):
+    new_fn = Path(vcf_file_name.stem + "_indexed.vcf")
+    new_fn_gzipped = Path(vcf_file_name.stem + "_indexed.vcf.gz")
+
+    if new_fn_gzipped.is_file() and new_fn_gzipped.with_suffix(".tbi").is_file():
+        print("index file has been built, skipping this process")
+        return
+
+    shutil.copy2(vcf_file_name, new_fn)
+    pysam.tabix_index(str(new_fn.absolute()), preset="vcf", force=True)
+    if check:
+        assert new_fn.is_file(), "file could not be copied.."
+        assert new_fn_gzipped.is_file(), "no tbi file established, could be a pysam problem"
+
+
 def update_existing_lib(new_fn: Path, old_fn_target: Path) -> None:
     old_fn_gz = old_fn_target.with_suffix(old_fn_target.suffix + ".gz")
     if not old_fn_gz.is_file():
@@ -184,6 +200,13 @@ def update_existing_lib(new_fn: Path, old_fn_target: Path) -> None:
     pysam.tabix_index(str(old_fn_target), preset="vcf", force=True)
 
 
+def parse_fetched_pos(fetched_pos: str):
+    # fetched_pos format = chrom-pos:pos
+    from_pos, to_pos = fetched_pos.split(":")
+    chrom, f_pos = from_pos.split("-")
+    return chrom, f_pos, to_pos
+
+
 def spliceai(input,
              output,
              ref_assembly,
@@ -196,7 +219,8 @@ def spliceai(input,
              precomputed_files_dir,
              skipped_chroms,
              log_file_name,
-             save_computed = True):
+             save_computed = True,
+             fetched_pos = None):
     # parse reference assembly and annotations
     try:
         with ANNOTATIONS[annotations] as anno:
@@ -213,8 +237,19 @@ def spliceai(input,
     sp_models = load_models()
 
     # open the input, update the header and open the output
-    vcf_input = pysam.VariantFile(input)
-    n_total_vcfs = sum([1 for _ in vcf_input])
+
+    if fetched_pos is not None:
+        f_chrom, f_start, f_end = parse_fetched_pos(fetched_pos)
+        build_index(Path(input), True)
+        vcf_input = pysam.VariantFile(Path(Path(input).stem + '_indexed.vcf.gz'))
+        tbi_iter = vcf_input.fetch(f_chrom, f_start, f_end)
+        n_total_vcfs = sum([1 for _ in tbi_iter])
+        tbi_iter = vcf_input.fetch(f_chrom, f_start, f_end)
+    else:
+        vcf_input = pysam.VariantFile(input)
+        n_total_vcfs = sum([1 for _ in vcf_input])
+        tbi_iter = None
+
     print(f"Input data contains {n_total_vcfs} variants")
     vcf_input.reset()
 
@@ -240,7 +275,7 @@ def spliceai(input,
     skipped_chroms = [] if skipped_chroms is None else skipped_chroms.split(",")
 
     # break input into batches
-    input_batches = iterate_batches(preprocessing_batch, vcf_input)
+    input_batches = iterate_batches(preprocessing_batch, vcf_input if fetched_pos is None else tbi_iter)
 
     # load precomputed scores via vcf
 
@@ -308,4 +343,5 @@ if __name__ == '__main__':
              precomputed_files_dir=args.precomputed_dir,
              skipped_chroms=args.skip_chr,
              log_file_name=args.log_file,
-             save_computed=True)
+             save_computed=True,
+             fetched_pos=args.fetch)
