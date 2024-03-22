@@ -154,7 +154,7 @@ def save_to_precomputed(vcf_file_name, dest_dir, time_as_suffix=True):
     new_vcf = pysam.VariantFile(output_fn.absolute(), mode="w", header=vcf_file.header)
 
     for record in vcf_file:
-        if "SpliceAI" in record.info:
+        if "SpliceAI" in record.info and all([len(s.split("|")) == 10 for s in record.info["SpliceAI"]]):
             new_vcf.write(record)
 
     pysam.tabix_index(str(output_fn.absolute()), preset="vcf", force=True)
