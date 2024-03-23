@@ -367,14 +367,15 @@ def annotate(nthreads: int,
         np.asarray([rec.x_alt for rec in batch]) for batch in length_batches
     ]
 
-    def predict_batch(batch: np.ndarray) -> np.ndarray:
+    def predict_batch(batch: np.ndarray, bs=batch_size) -> np.ndarray:
         # make prediction with each model
-        predictions = [model.predict(batch, batch_size, verbose=0) for model in models]
+        bs = min(bs, batch.shape[0])
+        predictions = [model.predict(batch, bs, verbose=0) for model in models]
         # calculate average prediction across models
         return np.mean(predictions, axis=0)
 
-    y_ref_batches = [predict_batch(batch) for batch in x_ref_batches]
-    y_alt_batches = [predict_batch(batch) for batch in x_alt_batches]
+    y_ref_batches = [predict_batch(batch, bs=batch_size) for batch in x_ref_batches]
+    y_alt_batches = [predict_batch(batch, bs=batch_size) for batch in x_alt_batches]
 
     # flatten predictions and perform post-processing
     y_ref: t.List[np.ndarray] = list(chain.from_iterable(y_ref_batches))
