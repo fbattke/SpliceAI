@@ -142,8 +142,6 @@ def preprocess(reference: Reference,
                 continue
             if '<' in alt or '>' in alt:
                 continue
-            if len(record.ref) > 1 and len(alt) > 1:
-                continue
             mapping_st = time()
             hash_str = hash_pattern.format(chrom=record.chrom,
                                            ref=record.ref,
@@ -252,6 +250,15 @@ def postprocess(dist_var: int,
             # correct dimensions
             np.max(y_alt[:, cov // 2:cov // 2 + len_alt], axis=1)[:, None, :],
             y_alt[:, cov // 2 + len_alt:]],  # after the variant
+            axis=1)
+    #MNP handling
+    elif len_ref > 1 and len_alt > 1:
+        zblock = np.zeros((1,len_ref-1,3))
+        y_alt = np.concatenate([
+            y_alt[:, :cov//2],
+            np.max(y_alt[:, cov//2:cov//2+len_alt], axis=1)[:, None, :],
+            zblock,
+            y_alt[:, cov//2+len_alt:]],
             axis=1)
     # concatenate on the 0-th axis -> array with size=(2, cov, 3)
     y = np.concatenate([y_ref, y_alt])
