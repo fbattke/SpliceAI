@@ -330,7 +330,7 @@ def spliceai(input,
         save_to_precomputed(output, pc_file_dir, time_as_suffix=True)
 
 
-if __name__ == '__main__':
+def main():
     args = get_options()
     spliceai(input=args.input,
              output=args.output,
