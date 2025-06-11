@@ -142,6 +142,8 @@ def preprocess(reference: Reference,
                 continue
             if '<' in alt or '>' in alt:
                 continue
+            if len(record.ref) > 1 and len(alt) > 1 and len(record.ref)!=len(alt):
+                continue
             mapping_st = time()
             hash_str = hash_pattern.format(chrom=record.chrom,
                                            ref=record.ref,
@@ -253,18 +255,15 @@ def postprocess(dist_var: int,
             axis=1)
     #MNP handling
     elif len_ref > 1 and len_alt > 1:
-        try:
-            zblock = np.zeros((1,len_ref-1,3))
-            y_alt = np.concatenate([
-                y_alt[:, :cov//2],
-                # replace insertion by one item with max over all scores in the insertion
-                np.max(y_alt[:, cov//2:cov//2+len_alt], axis=1)[:, None, :],
-                # replace deletion by zero block, but one shorter than deleted length
-                zblock,
-                y_alt[:, cov//2+len_alt:]],
-                axis=1)
-        except ValueError:
-            pass
+        zblock = np.zeros((1,len_ref-1,3))
+        y_alt = np.concatenate([
+            y_alt[:, :cov//2],
+            # replace insertion by one item with max over all scores in the insertion
+            np.max(y_alt[:, cov//2:cov//2+len_alt], axis=1)[:, None, :],
+            # replace deletion by zero block, but one shorter than deleted length
+            zblock,
+            y_alt[:, cov//2+len_alt:]],
+            axis=1)
     # concatenate on the 0-th axis -> array with size=(2, cov, 3)
     y = np.concatenate([y_ref, y_alt])
     # the location of the max diff of the 1th position of per-character outputs
