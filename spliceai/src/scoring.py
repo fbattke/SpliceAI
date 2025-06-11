@@ -253,12 +253,19 @@ def postprocess(dist_var: int,
             axis=1)
     #MNP handling
     elif len_ref > 1 and len_alt > 1:
+        zblock = np.zeros((y_alt.shape[0], len_ref-1, 3))
+        start = cov // 2
+        end = start + len_alt
+        if end > start and end <= y_alt.shape[1]:
+            max_slice = np.max(y_alt[:, start:end], axis=1)[:, None, :]
+        else:
+            max_slice = np.zeros((y_alt.shape[0], 1, y_alt.shape[2]))  # fallback
         zblock = np.zeros((1,len_ref-1,3))
         y_alt = np.concatenate([
-            y_alt[:, :cov//2],
-            np.max(y_alt[:, cov//2:cov//2+len_alt], axis=1)[:, None, :],
+            y_alt[:, :start],
+            max_slice,
             zblock,
-            y_alt[:, cov//2+len_alt:]],
+            y_alt[:, end:]],
             axis=1)
     # concatenate on the 0-th axis -> array with size=(2, cov, 3)
     y = np.concatenate([y_ref, y_alt])
