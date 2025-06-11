@@ -226,7 +226,6 @@ def postprocess(dist_var: int,
     len_ref = len(ref)
     len_alt = len(alt)
     len_del = max(len_ref - len_alt, 0)  # deletion length
-    len_ins = max(len_alt - len_ref, 0)
     # add a dimension to predictions
     y_ref = y_ref[None, :, :]
     y_alt = y_alt[None, :, :]
@@ -254,19 +253,18 @@ def postprocess(dist_var: int,
             axis=1)
     #MNP handling
     elif len_ref > 1 and len_alt > 1:
-        zblock = np.zeros((1,len_del,3))
-        start = cov // 2
-        end = start + len_ins
-        if end > start and end <= y_alt.shape[1]:
-            max_slice = np.max(y_alt[:, start:end], axis=1)[:, None, :]
-        else:
-            max_slice = np.zeros((y_alt.shape[0], 0, y_alt.shape[2]))
-        y_alt = np.concatenate([
-            y_alt[:, :cov//2],
-            max_slice,
-            zblock,
-            y_alt[:, cov//2+len_ins:]],
-            axis=1)
+        try:
+            zblock = np.zeros((1,len_ref-1,3))
+            y_alt = np.concatenate([
+                y_alt[:, :cov//2],
+                # replace insertion by one item with max over all scores in the insertion
+                np.max(y_alt[:, cov//2:cov//2+len_alt], axis=1)[:, None, :],
+                # replace deletion by zero block, but one shorter than deleted length
+                zblock,
+                y_alt[:, cov//2+len_alt:]],
+                axis=1)
+        except ValueError:
+            pass
     # concatenate on the 0-th axis -> array with size=(2, cov, 3)
     y = np.concatenate([y_ref, y_alt])
     # the location of the max diff of the 1th position of per-character outputs
